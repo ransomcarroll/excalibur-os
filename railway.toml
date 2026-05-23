@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "uv run excalibur ship"
+restartPolicyType = "NEVER"
+
+[[cron]]
+schedule = "0 23 * * *"  # 23:00 UTC = 18:00 ET, adjust to your TZ
+command = "uv run excalibur ship"
