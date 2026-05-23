@@ -46,7 +46,17 @@ class LinearClient:
             json={"query": query, "variables": variables or {}},
             label="linear",
         )
-        r.raise_for_status()
+        if r.status_code >= 400:
+            # Surface the response body so caller can see the actual GraphQL error,
+            # not just "400 Bad Request".
+            try:
+                body_preview = r.text[:1000]
+            except Exception:
+                body_preview = "<unreadable>"
+            raise RuntimeError(
+                f"Linear HTTP {r.status_code} for query "
+                f"{query.strip().splitlines()[0][:80]!r}: {body_preview}"
+            )
         body = r.json()
         if "errors" in body:
             raise RuntimeError(f"Linear GraphQL error: {body['errors']}")
@@ -57,7 +67,7 @@ class LinearClient:
     ) -> list[LinearIssue]:
         """Issues labeled agent-ready, not shipped, no open PR linked."""
         q = """
-        query Shippable($teamId: String!, $readyId: String!, $shippedId: String!) {
+        query Shippable($teamId: ID!, $readyId: ID!, $shippedId: ID!) {
           issues(
             filter: {
               team: { id: { eq: $teamId } }

@@ -36,3 +36,5 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+norecursedirs = ["workspaces", ".venv", "build", "dist"]
+testpaths = ["tests"]
