@@ -63,19 +63,26 @@ class LinearClient:
         return body["data"]
 
     def shippable_issues(
-        self, agent_ready_label_id: str, shipped_label_id: str
+        self,
+        agent_ready_label_id: str,
+        exclude_label_ids: list[str],
     ) -> list[LinearIssue]:
-        """Issues labeled agent-ready, not shipped, no open PR linked."""
+        """Issues labeled `agent-ready` whose label set is disjoint from `exclude_label_ids`.
+
+        Linear's collection filter (`labels: { id: { nin } }`) matches if *any*
+        label is outside the exclude set, not "no label is in the exclude set."
+        So we narrow to agent-ready in the query, then filter terminal-labeled
+        issues client-side.
+        """
         q = """
-        query Shippable($teamId: ID!, $readyId: ID!, $shippedId: ID!) {
+        query Shippable($teamId: ID!, $readyId: ID!) {
           issues(
             filter: {
               team: { id: { eq: $teamId } }
               labels: { id: { eq: $readyId } }
-              and: [{ labels: { id: { neq: $shippedId } } }]
               state: { type: { nin: ["completed", "canceled"] } }
             }
-            first: 50
+            first: 100
           ) {
             nodes {
               id
@@ -94,9 +101,9 @@ class LinearClient:
             {
                 "teamId": self.team_id,
                 "readyId": agent_ready_label_id,
-                "shippedId": shipped_label_id,
             },
         )
+        exclude = set(exclude_label_ids)
         return [
             LinearIssue(
                 id=n["id"],
@@ -108,6 +115,7 @@ class LinearClient:
                 label_ids=[lab["id"] for lab in n["labels"]["nodes"]],
             )
             for n in data["issues"]["nodes"]
+            if not (exclude & {lab["id"] for lab in n["labels"]["nodes"]})
         ]
 
     def find_label_id(self, name: str) -> str | None:

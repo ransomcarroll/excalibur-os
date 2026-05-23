@@ -40,6 +40,47 @@ def _gql_ok(data: dict) -> httpx.Response:
     return httpx.Response(200, json={"data": data})
 
 
+def test_shippable_issues_filters_out_terminal_labels():
+    t = _Recorder([
+        _gql_ok({
+            "issues": {
+                "nodes": [
+                    {
+                        "id": "open",
+                        "identifier": "ISS-1",
+                        "title": "shippable",
+                        "description": "",
+                        "url": "u1",
+                        "branchName": "b1",
+                        "labels": {"nodes": [{"id": "ready"}]},
+                    },
+                    {
+                        "id": "blocked",
+                        "identifier": "ISS-2",
+                        "title": "already-blocked",
+                        "description": "",
+                        "url": "u2",
+                        "branchName": "b2",
+                        "labels": {"nodes": [{"id": "ready"}, {"id": "blocked-id"}]},
+                    },
+                    {
+                        "id": "shipped",
+                        "identifier": "ISS-3",
+                        "title": "already-shipped",
+                        "description": "",
+                        "url": "u3",
+                        "branchName": "b3",
+                        "labels": {"nodes": [{"id": "ready"}, {"id": "shipped-id"}]},
+                    },
+                ]
+            }
+        })
+    ])
+    c = _client(t)
+    out = c.shippable_issues("ready", ["shipped-id", "blocked-id", "failed-id"])
+    assert [i.identifier for i in out] == ["ISS-1"]
+
+
 def test_shippable_issues_parses_nodes():
     t = _Recorder([
         _gql_ok({
@@ -59,7 +100,7 @@ def test_shippable_issues_parses_nodes():
         })
     ])
     c = _client(t)
-    issues = c.shippable_issues("ready", "shipped")
+    issues = c.shippable_issues("ready", ["shipped", "blocked", "failed"])
     assert len(issues) == 1
     assert issues[0].identifier == "ISS-1"
     assert issues[0].label_ids == ["L1", "L2"]

@@ -27,7 +27,11 @@ class Workspace:
 
 class WorkspaceManager:
     def __init__(self, workdir: str, github_repo: str, github_token: str, base_branch: str):
-        self.workdir = Path(workdir)
+        # Resolve to absolute so subprocess calls don't fight relative paths
+        # (git worktree add with a relative path resolves against repo_root,
+        # putting the worktree somewhere unexpected; the SDK's later cwd then
+        # can't find that location and CreateProcess fails on Windows).
+        self.workdir = Path(workdir).expanduser().resolve()
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.github_repo = github_repo
         self.github_token = github_token

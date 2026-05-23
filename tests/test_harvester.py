@@ -19,9 +19,13 @@ class FakeLinear:
         self.ensured.append(name)
         return f"LBL-{name}"
 
-    def shippable_issues(self, agent_ready_label_id: str, shipped_label_id: str):
+    def shippable_issues(self, agent_ready_label_id: str, exclude_label_ids: list[str]):
         assert agent_ready_label_id == f"LBL-{AGENT_READY_LABEL}"
-        assert shipped_label_id == f"LBL-{SHIPPED_LABEL}"
+        assert set(exclude_label_ids) == {
+            f"LBL-{SHIPPED_LABEL}",
+            f"LBL-{BLOCKED_LABEL}",
+            f"LBL-{FAILED_LABEL}",
+        }
         return self._issues
 
 
