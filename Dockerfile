@@ -5,11 +5,20 @@
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# git for cloning target repos + managing per-group worktrees.
-# ca-certificates so https calls work without warnings.
+# Tools the executor needs while running headless in a worktree:
+#   git           — clone target repos + manage per-group worktrees
+#   ca-certificates — outbound https without warnings
+#   curl + gnupg  — bootstrap the NodeSource apt repo for nodejs
+#   nodejs        — so the executor can run `npm run typecheck`/lint/build
+#                   on TS/JS projects it ships changes for. Pinned to v22
+#                   LTS to match what Next 15 / React 19 expect.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends \
+        git ca-certificates curl gnupg \
+ && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/* \
+ && node --version && npm --version
 
 # Non-root bot identity. /app must be pre-chowned because WORKDIR creates
 # the dir as root and --chown on COPY only chowns the *contents*, not the
