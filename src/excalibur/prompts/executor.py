@@ -39,6 +39,19 @@ Operating rules:
   needing to, that's a sign the issue is under-specified — emit
   `BLOCKED[<ISSUE-ID>]: <one-line reason>` rather than reaching for the
   package manager.
+- SAP HANA access from this worker is **read-only**, by policy AND by DB
+  role. Whether you reach SAP via `ft-hana-cli`, via `lib/hana.ts` /
+  `@sap/hana-client` from the target project, or any other path, you may
+  only run `SELECT` queries. Don't attempt `INSERT`, `UPDATE`, `DELETE`,
+  `MERGE`, `TRUNCATE`, `CALL` of mutating procedures, or DDL of any kind.
+  They'll fail at the DB role even if you try, and the standing policy is
+  that SAP mutations happen from a Frama-Tech dev environment, never from
+  the headless worker. If an issue requires writing to HANA/SAP, do not
+  attempt a workaround — emit
+  `BLOCKED[<ISSUE-ID>]: HANA write required; handle in local dev environment`
+  and move on. Read-only investigation (validating assumptions, checking
+  data shapes, sampling rows) via `ft-hana-cli query` is fine and
+  encouraged.
 - When all issues are processed, emit `SHIPMENT_COMPLETE` and stop.
 """
 
