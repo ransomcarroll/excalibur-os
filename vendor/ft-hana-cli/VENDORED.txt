@@ -1,0 +1,1 @@
+vendored from upstream commit cb74696 on 2026-05-18 15:18:56 -0500

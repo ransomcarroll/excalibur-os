@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ft-hana-cli"
+version = "0.1.0"
+description = "Read-only SAP HANA query CLI for Frama-Tech (FTPROD2 schema)"
+requires-python = ">=3.9"
+dependencies = [
+    "hdbcli>=2.19",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+ft-hana-cli = "ft_hana_cli.cli:main"
+
+[tool.setuptools]
+packages = ["ft_hana_cli"]
+
+[tool.setuptools.package-data]
+ft_hana_cli = ["catalogue/objects/*.md", "catalogue/context/*.md"]

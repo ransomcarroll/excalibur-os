@@ -37,7 +37,15 @@ USER excalibur
 # Railway can override this with the EXCALIBUR_WORKDIR env var if needed.
 ENV EXCALIBUR_WORKDIR=/home/excalibur/workspaces
 
-# Pre-resolve deps at build time so the image is ready to run.
-RUN uv sync --frozen
+# Pre-resolve deps at build time so the image is ready to run. ft-hana-cli is
+# vendored under /app/vendor (private upstream — see vendor/ft-hana-cli/VENDORED.txt
+# for the upstream commit). Installing it into the same .venv means `ft-hana-cli`
+# lands on PATH whenever `uv run …` (or anything inside the venv) is the entrypoint.
+RUN chmod +x /app/docker/entrypoint.sh \
+ && uv sync --frozen \
+ && uv pip install /app/vendor/ft-hana-cli
 
+# Entrypoint writes ~/.ft-hana/hana.env from HANA_* env vars so ft-hana-cli finds
+# its credentials, then execs the CMD.
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["uv", "run", "excalibur", "ship"]
