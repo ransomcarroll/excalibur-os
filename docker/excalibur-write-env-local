@@ -1,0 +1,51 @@
+#!/bin/sh
+# excalibur-write-env-local — materialize a project's .env.local from the
+# worker's process environment.
+#
+# Many Frama-Tech projects' npm scripts use `dotenv -e .env.local --` to load
+# credentials at run time. .env.local is gitignored, so a fresh worktree clone
+# doesn't have one. This helper writes a .env.local in the current directory
+# containing whichever of the well-known vars are present in the worker's env.
+#
+# The executor should call this once at the start of any shipment that's
+# going to run npm scripts using dotenv-cli (db:push, db:migrate, hana:test,
+# the seed/snapshot/migrate-collections scripts, etc.).
+#
+# Usage:
+#   excalibur-write-env-local            # writes ./.env.local
+#   excalibur-write-env-local <target>   # writes <target>
+
+set -eu
+
+target="${1:-.env.local}"
+
+# Whitelist of env vars we propagate from the worker env to .env.local. Keep
+# this conservative — we don't want unrelated Railway / Anthropic / GitHub
+# secrets leaking into the worktree's env file.
+VARS="
+HANA_HOST
+HANA_PORT
+HANA_USER
+HANA_PASSWORD
+HANA_SCHEMA
+HANA_ENCRYPT
+DATABASE_URL
+AUTH_URL
+NEXTAUTH_SECRET
+"
+
+written=0
+{
+  for var in $VARS; do
+    val=$(printenv "$var" 2>/dev/null || true)
+    if [ -n "$val" ]; then
+      # printf '%s' avoids shell expansion, so a value containing $/`/" is
+      # preserved verbatim.
+      printf '%s=%s\n' "$var" "$val"
+      written=$((written + 1))
+    fi
+  done
+} > "$target"
+
+chmod 600 "$target"
+echo "[excalibur-write-env-local] wrote $written env var(s) to $target" >&2
