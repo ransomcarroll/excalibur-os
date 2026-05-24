@@ -1,8 +1,9 @@
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "uv run excalibur ship"
+# CMD comes from the Dockerfile.
 restartPolicyType = "NEVER"
 
 # Manual-only runs for now. Trigger with:
