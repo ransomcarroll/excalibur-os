@@ -34,15 +34,28 @@ else
 fi
 
 # ---- 2. Ephemeral Postgres ----------------------------------------------
+# Cluster is initdb'd at build; createdb is deferred to here because BuildKit
+# can't reliably keep a postgres process running during a RUN step.
 PGDATA=/home/excalibur/pgdata
 if [ -d "$PGDATA" ] && command -v pg_ctl >/dev/null 2>&1; then
   if pg_ctl -D "$PGDATA" -l /tmp/pg.log -w -t 30 start; then
-    # ---- 3. DATABASE_URL ------------------------------------------------
+    # First-boot createdb (cluster is empty after initdb).
+    if ! psql -h localhost -U postgres -d postgres -tAc \
+           "SELECT 1 FROM pg_database WHERE datname='ftpm'" 2>/dev/null | grep -q '^1$'; then
+      createdb -h localhost -U postgres ftpm \
+        && echo "[entrypoint] created database 'ftpm'" >&2 \
+        || echo "[entrypoint] WARNING: createdb ftpm failed" >&2
+    fi
+    # ---- 3. DATABASE_URL --------------------------------------------------
     : "${DATABASE_URL:=postgresql://postgres:postgres@localhost:5432/ftpm}"
     export DATABASE_URL
     echo "[entrypoint] postgres up; DATABASE_URL=$DATABASE_URL" >&2
   else
     echo "[entrypoint] WARNING: pg_ctl start failed (see /tmp/pg.log); db scripts will not work this run." >&2
+    if [ -s /tmp/pg.log ]; then
+      echo "[entrypoint] /tmp/pg.log tail:" >&2
+      tail -20 /tmp/pg.log >&2 || true
+    fi
   fi
 else
   echo "[entrypoint] postgres not installed or pgdata missing; db scripts will not work this run." >&2

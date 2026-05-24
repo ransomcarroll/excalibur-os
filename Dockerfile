@@ -66,20 +66,21 @@ RUN chmod +x /app/docker/entrypoint.sh /app/docker/excalibur-write-env-local \
  && uv pip install /app/vendor/ft-hana-cli \
  && ln -sf /app/docker/excalibur-write-env-local /app/.venv/bin/excalibur-write-env-local
 
-# Pre-init the Postgres cluster owned by the excalibur user. We create the
-# empty `ftpm` database here so the executor doesn't pay createdb cost per
-# shipment; bringing it to current schema is the executor's job (via
-# `npx prisma migrate deploy` from the target project's worktree).
-RUN initdb \
+# Pre-init the Postgres cluster owned by the excalibur user. We only run
+# initdb at build time — BuildKit's sandbox doesn't reliably allow forking
+# long-running processes during RUN, so `pg_ctl start` (and therefore
+# `createdb`) is deferred to docker/entrypoint.sh. The postgres role's
+# password is set via --pwfile so we don't need to start the cluster just
+# to ALTER ROLE.
+RUN echo postgres > /tmp/pgpass.tmp \
+ && initdb \
         -D /home/excalibur/pgdata \
         -U postgres \
         --auth-local=trust \
         --auth-host=trust \
+        --pwfile=/tmp/pgpass.tmp \
         --no-instructions \
- && pg_ctl -D /home/excalibur/pgdata -l /tmp/pg-init.log -w start \
- && psql -h localhost -U postgres -d postgres -c "ALTER ROLE postgres WITH PASSWORD 'postgres';" \
- && createdb -h localhost -U postgres ftpm \
- && pg_ctl -D /home/excalibur/pgdata -m fast stop
+ && rm /tmp/pgpass.tmp
 
 # Entrypoint writes ~/.ft-hana/hana.env, starts the prebaked Postgres, sets
 # DATABASE_URL, then execs the CMD.
