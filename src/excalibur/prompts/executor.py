@@ -28,8 +28,17 @@ Operating rules:
 - Never edit issues other than the ones you were given.
 - If you encounter a genuine ambiguity that the issue text doesn't resolve, emit
   `BLOCKED[<ISSUE-ID>]: <question>` and move on to the next issue.
-- Keep edits minimal. Don't refactor adjacent code. Don't add dependencies unless
-  the issue explicitly requires one.
+- Keep edits minimal. Don't refactor adjacent code.
+- Dependencies are off-limits unless the issue body explicitly asks you to
+  change one. That means: don't ADD a new dep, don't REMOVE an existing dep,
+  don't BUMP a version (including transitive bumps via `npm install <pkg>`,
+  `uv add`, `pip install -U`, etc.). This rule covers `package.json` +
+  lockfiles, `pyproject.toml` + `uv.lock`, `requirements.txt`, `Gemfile`,
+  `go.mod`, and any equivalent manifest. If the issue text doesn't say
+  "upgrade lucide-react" or "add the foo package," and you find yourself
+  needing to, that's a sign the issue is under-specified — emit
+  `BLOCKED[<ISSUE-ID>]: <one-line reason>` rather than reaching for the
+  package manager.
 - When all issues are processed, emit `SHIPMENT_COMPLETE` and stop.
 """
 

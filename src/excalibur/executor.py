@@ -103,7 +103,96 @@ async def _drive_client(
                     break
 
             for block in getattr(msg, "content", []) or []:
-                text = getattr(block, "text", None)
-                if text:
-                    result.transcript += text
-                    scan_markers(text, result.done, result.blocked)
+                _surface_block(block, group, result)
+
+
+# --- Per-block surfacing ------------------------------------------------------
+#
+# Railway only captures what we explicitly log via structlog — the bundled
+# Claude CLI's own stdout (tool calls, transcripts, typecheck output) doesn't
+# come through. To make headless runs debuggable post-mortem, every meaningful
+# block the SDK yields gets a structured log line here.
+
+
+_TEXT_LOG_CHARS = 2000
+_TOOL_INPUT_CHARS = 400
+_TOOL_RESULT_CHARS = 1500
+
+
+def _surface_block(block, group: Group, result: ExecutionResult) -> None:
+    """Translate one SDK message block into a structlog event + state update."""
+    # 1. Text block — assistant narrative + markers.
+    text = getattr(block, "text", None)
+    if text:
+        result.transcript += text
+        scan_markers(text, result.done, result.blocked)
+        log.info(
+            "executor_text",
+            group=group.name,
+            text=_truncate(text, _TEXT_LOG_CHARS),
+        )
+        return
+
+    # 2. Tool use block — what the executor is about to do.
+    tool_name = getattr(block, "name", None)
+    if tool_name:
+        log.info(
+            "executor_tool",
+            group=group.name,
+            tool=tool_name,
+            input=_summarize_tool_input(tool_name, getattr(block, "input", None)),
+        )
+        return
+
+    # 3. Tool result block — what came back. Often a list of {type,text} dicts.
+    content = getattr(block, "content", None)
+    if content is not None:
+        is_error = bool(getattr(block, "is_error", False))
+        summary = _summarize_tool_result(content)
+        if is_error:
+            log.warning("executor_tool_error", group=group.name, content=summary)
+        else:
+            log.debug("executor_tool_result", group=group.name, content=summary)
+
+
+def _truncate(s: str, n: int) -> str:
+    if len(s) <= n:
+        return s
+    return s[:n] + f"…[+{len(s) - n} chars]"
+
+
+def _summarize_tool_input(tool: str, inp) -> dict | None:
+    """Compact view of a tool call's arguments — the bits a human would want
+    in the log to recognize what the executor was doing."""
+    if not isinstance(inp, dict):
+        return None
+    if tool == "Bash":
+        return {"command": _truncate(str(inp.get("command", "")), _TOOL_INPUT_CHARS)}
+    if tool in ("Read", "Edit", "Write"):
+        return {
+            "file_path": inp.get("file_path") or inp.get("path"),
+            **(
+                {"old_string": _truncate(str(inp["old_string"]), 200)}
+                if "old_string" in inp
+                else {}
+            ),
+        }
+    if tool in ("Glob", "Grep"):
+        return {"pattern": inp.get("pattern"), "path": inp.get("path")}
+    # Unknown tool — just show the keys + truncated values.
+    return {k: _truncate(str(v), _TOOL_INPUT_CHARS) for k, v in inp.items()}
+
+
+def _summarize_tool_result(content) -> str:
+    """Tool results are typically a list of {type, text} dicts or a plain string."""
+    if isinstance(content, list):
+        parts = []
+        for c in content:
+            if isinstance(c, dict) and "text" in c:
+                parts.append(str(c["text"]))
+            else:
+                parts.append(str(c))
+        joined = "\n".join(parts)
+    else:
+        joined = str(content)
+    return _truncate(joined, _TOOL_RESULT_CHARS)
