@@ -80,7 +80,13 @@ RUN echo postgres > /tmp/pgpass.tmp \
         --auth-host=trust \
         --pwfile=/tmp/pgpass.tmp \
         --no-instructions \
- && rm /tmp/pgpass.tmp
+ && rm /tmp/pgpass.tmp \
+ # The Debian postgres package patches initdb to default unix_socket_directories
+ # to /var/run/postgresql, which is owned by the system `postgres` user — our
+ # `excalibur` user can't write its lock file there. Point the socket dir at /tmp.
+ # TCP connections via -h localhost are unaffected; this only changes the
+ # Unix-socket path.
+ && echo "unix_socket_directories = '/tmp'" >> /home/excalibur/pgdata/postgresql.conf
 
 # Entrypoint writes ~/.ft-hana/hana.env, starts the prebaked Postgres, sets
 # DATABASE_URL, then execs the CMD.
