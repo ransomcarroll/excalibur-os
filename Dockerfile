@@ -11,8 +11,13 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Non-root bot identity.
-RUN useradd --create-home --uid 10001 excalibur
+# Non-root bot identity. /app must be pre-chowned because WORKDIR creates
+# the dir as root and --chown on COPY only chowns the *contents*, not the
+# directory itself — so `uv sync` would later fail with "Permission denied"
+# trying to create /app/.venv.
+RUN useradd --create-home --uid 10001 excalibur \
+ && mkdir -p /app \
+ && chown excalibur:excalibur /app
 
 WORKDIR /app
 COPY --chown=excalibur:excalibur . /app
