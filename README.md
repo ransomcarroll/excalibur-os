@@ -39,9 +39,9 @@ install script. Next time you start a Claude Code session in that directory,
 `/excalibur:create-issue` and `/excalibur:update-issues` will be available.
 
 ```bash
-git clone git@github.com:FTCPM-DEV/excalibur.git ~/excalibur
+git clone git@github.com:ransomcarroll/excalibur-os.git ~/excalibur-os
 cd /path/to/your/project
-~/excalibur/scripts/install.sh
+~/excalibur-os/scripts/install.sh
 ```
 
 The script creates:
@@ -50,6 +50,9 @@ The script creates:
   commands themselves.
 - `CLAUDE.md` — only if one doesn't already exist. Excalibur reads it for
   project standards but doesn't manage its contents; fill it in yourself.
+- `excalibur.yml` — only if neither it nor `agent-os/linear-config.yml`
+  already exists. The script prompts you for your Linear team (required)
+  and project (optional) and writes them here.
 
 ## Usage
 
