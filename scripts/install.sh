@@ -18,6 +18,17 @@ for cmd in create-issue update-issues; do
   echo "installed: .claude/commands/excalibur/${cmd}.md"
 done
 
+if [[ ! -f "CLAUDE.md" ]]; then
+  cat > CLAUDE.md <<'EOF'
+# Project standards
+
+Add your project's conventions, architecture notes, and constraints here.
+Excalibur's nightly executor reads this file when implementing issues, so
+anything you'd tell a new contributor belongs here.
+EOF
+  echo "created: CLAUDE.md (stub — fill it in with your project's standards)"
+fi
+
 echo
 echo "Next:"
 echo "  1. Ensure Linear MCP is registered as 'linear-server':"

@@ -34,16 +34,22 @@ The local side is two slash commands. The remote side does the work.
 
 ## Local install
 
-Into a project that already has Claude Code wired up:
+From inside a project (any git repo where you use Claude Code), run the
+install script. Next time you start a Claude Code session in that directory,
+`/excalibur:create-issue` and `/excalibur:update-issues` will be available.
 
 ```bash
 git clone git@github.com:FTCPM-DEV/excalibur.git ~/excalibur
+cd /path/to/your/project
 ~/excalibur/scripts/install.sh
 ```
 
-This drops `.claude/commands/excalibur/{create-issue,update-issues}.md` into
-the project. Standards live in your existing `CLAUDE.md` — Excalibur doesn't
-manage them.
+The script creates:
+
+- `.claude/commands/excalibur/{create-issue,update-issues}.md` — the slash
+  commands themselves.
+- `CLAUDE.md` — only if one doesn't already exist. Excalibur reads it for
+  project standards but doesn't manage its contents; fill it in yourself.
 
 ## Usage
 
