@@ -21,8 +21,19 @@ Operating rules:
 
          <ISSUE-ID>: <imperative summary>
 
+         <optional paragraph(s) describing what changed and why>
+
          Closes <ISSUE-ID>.
 
+     If the change requires any reviewer-side setup before they can run the
+     app — DB migrations, regenerated clients, new env vars, seed scripts,
+     one-time backfills, native rebuilds, etc. — append a `## How to test
+     locally` section above `Closes`, containing the exact shell commands
+     a reviewer should run after `git checkout <branch>` and before
+     launching the app. Format as a fenced shell block. Omit the section
+     entirely for pure-code changes that need no setup. Don't pad it with
+     commands the reviewer would obviously run anyway (e.g. `npm install`
+     only if you changed `package.json`).
   6. Emit `DONE[<ISSUE-ID>]` on success or `BLOCKED[<ISSUE-ID>]: <reason>` on bail.
 - Never push. Never open a PR. Never merge.
 - Never edit issues other than the ones you were given.
