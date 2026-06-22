@@ -28,6 +28,7 @@ class LinearClient:
         self,
         api_key: str,
         team_id: str,
+        project_id: str | None = None,
         *,
         client: httpx.Client | None = None,
     ):
@@ -37,6 +38,7 @@ class LinearClient:
             timeout=30.0,
         )
         self.team_id = team_id
+        self.project_id = project_id
 
     def _gql(self, query: str, variables: dict | None = None) -> dict:
         r = request_with_retry(
@@ -73,13 +75,25 @@ class LinearClient:
         label is outside the exclude set, not "no label is in the exclude set."
         So we narrow to agent-ready in the query, then filter terminal-labeled
         issues client-side.
+
+        When `self.project_id` is set, the query is further scoped to that
+        project. A team in Linear can host many projects (and several repos), so
+        without this scope a single repo's worker would harvest every team's
+        `agent-ready` issue and try to implement them in the wrong checkout.
         """
+        # Inject the project scope only when configured: filtering on
+        # `project: { id: { eq: null } }` would instead match issues with *no*
+        # project, which is never what we want.
+        project_decl = ", $projectId: ID" if self.project_id else ""
+        project_filter = (
+            "\n              project: { id: { eq: $projectId } }" if self.project_id else ""
+        )
         q = """
-        query Shippable($teamId: ID!, $readyId: ID!) {
+        query Shippable($teamId: ID!, $readyId: ID!__PROJECT_DECL__) {
           issues(
             filter: {
               team: { id: { eq: $teamId } }
-              labels: { id: { eq: $readyId } }
+              labels: { id: { eq: $readyId } }__PROJECT_FILTER__
               state: { type: { nin: ["completed", "canceled"] } }
             }
             first: 100
@@ -95,14 +109,14 @@ class LinearClient:
             }
           }
         }
-        """
-        data = self._gql(
-            q,
-            {
-                "teamId": self.team_id,
-                "readyId": agent_ready_label_id,
-            },
-        )
+        """.replace("__PROJECT_DECL__", project_decl).replace("__PROJECT_FILTER__", project_filter)
+        variables = {
+            "teamId": self.team_id,
+            "readyId": agent_ready_label_id,
+        }
+        if self.project_id:
+            variables["projectId"] = self.project_id
+        data = self._gql(q, variables)
         exclude = set(exclude_label_ids)
         return [
             LinearIssue(

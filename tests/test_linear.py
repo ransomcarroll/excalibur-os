@@ -27,13 +27,13 @@ class _Recorder:
         return self._responses.pop(0)
 
 
-def _client(transport: _Recorder) -> LinearClient:
+def _client(transport: _Recorder, project_id: str | None = None) -> LinearClient:
     inner = httpx.Client(
         transport=httpx.MockTransport(transport),
         base_url="https://api.linear.app",
         headers={"Authorization": "test"},
     )
-    return LinearClient(api_key="test", team_id="TEAM", client=inner)
+    return LinearClient(api_key="test", team_id="TEAM", project_id=project_id, client=inner)
 
 
 def _gql_ok(data: dict) -> httpx.Response:
@@ -104,6 +104,26 @@ def test_shippable_issues_parses_nodes():
     assert len(issues) == 1
     assert issues[0].identifier == "ISS-1"
     assert issues[0].label_ids == ["L1", "L2"]
+
+
+def test_shippable_issues_omits_project_scope_by_default():
+    t = _Recorder([_gql_ok({"issues": {"nodes": []}})])
+    c = _client(t)  # no project_id
+    c.shippable_issues("ready", [])
+    payload = t.calls[0]["payload"]
+    assert "project" not in payload["query"]
+    assert "projectId" not in payload["query"]
+    assert "projectId" not in payload["variables"]
+
+
+def test_shippable_issues_scopes_to_project_when_set():
+    t = _Recorder([_gql_ok({"issues": {"nodes": []}})])
+    c = _client(t, project_id="PROJ-123")
+    c.shippable_issues("ready", [])
+    payload = t.calls[0]["payload"]
+    assert "project: { id: { eq: $projectId } }" in payload["query"]
+    assert "$projectId: ID" in payload["query"]
+    assert payload["variables"]["projectId"] == "PROJ-123"
 
 
 def test_find_label_id_case_insensitive():

@@ -95,6 +95,7 @@ Set env vars in Railway:
 | `GITHUB_TOKEN` | Fine-grained PAT, scoped to FTCPM-DEV/* with repo/PR write |
 | `LINEAR_API_KEY` | Linear personal API key (Settings → API) |
 | `LINEAR_TEAM_ID` | Which team to harvest from |
+| `LINEAR_PROJECT_ID` | Optional. Scope harvesting to one project in the team — set it when the team hosts multiple projects/repos so this worker only takes its own issues. Blank = whole team. |
 | `GITHUB_REPO` | `FTCPM-DEV/your-project` |
 | `EXCALIBUR_BASE_BRANCH` | Default `dev` |
 | `EXCALIBUR_MAX_ISSUES_PER_SHIPMENT` | Default `8` |

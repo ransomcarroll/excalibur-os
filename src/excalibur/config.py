@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     github_token: str
     linear_api_key: str
     linear_team_id: str
+    linear_project_id: str | None = None
     github_repo: str
     excalibur_base_branch: str = "dev"
     excalibur_max_issues_per_shipment: int = 8

@@ -22,7 +22,9 @@ async def run_shipment(
     dry_run: bool = False,
     only: list[str] | None = None,
 ) -> None:
-    linear = LinearClient(settings.linear_api_key, settings.linear_team_id)
+    linear = LinearClient(
+        settings.linear_api_key, settings.linear_team_id, settings.linear_project_id
+    )
     gh = GitHubClient(settings.github_token, settings.github_repo)
     wm = WorkspaceManager(
         workdir=settings.excalibur_workdir,

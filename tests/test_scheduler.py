@@ -77,6 +77,7 @@ def _settings(**overrides) -> Any:
         github_token="gt",
         linear_api_key="lk",
         linear_team_id="team",
+        linear_project_id=None,
         github_repo="owner/repo",
         excalibur_base_branch="dev",
         excalibur_max_issues_per_shipment=8,
