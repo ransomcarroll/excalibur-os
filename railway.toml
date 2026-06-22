@@ -3,9 +3,13 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-# CMD comes from the Dockerfile.
+# CMD comes from the Dockerfile (`uv run excalibur ship`); that is also the
+# command Railway runs on the cron schedule.
 restartPolicyType = "NEVER"
-
-[[cron]]
-schedule = "*/30 * * * *"  # every 30 minutes
-command = "uv run excalibur ship"
+# Railway cron is a service-level setting ("Cron Schedule"), expressed here as
+# config-as-code. Min frequency 5 min; times are UTC. NOTE: a service's cron
+# can also be set via the dashboard / API (update_service.cron_schedule) — that
+# is what actually governs the deployed services today; this key keeps it
+# reproducible on the next `railway up`. (The old `[[cron]]` table syntax is
+# NOT valid Railway config and was silently ignored.)
+cronSchedule = "*/30 * * * *"
